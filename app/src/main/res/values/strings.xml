@@ -1,3 +1,93 @@
 <resources>
     <string name="app_name">Nail Status</string>
+
+    <string name="nav_status">Status</string>
+    <string name="nav_meals">Meals</string>
+    <string name="nav_sleep">Sleep</string>
+    <string name="nav_calendars">Calendars</string>
+    <string name="title_settings">Settings</string>
+
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_add">Add</string>
+    <string name="action_ok">OK</string>
+    <string name="action_show_token">Show token</string>
+    <string name="action_hide_token">Hide token</string>
+    <string name="action_remove_phrase">Remove phrase</string>
+    <string name="action_remove_photo">Remove photo</string>
+    <string name="action_add_photos">Add photos</string>
+    <string name="action_import_recent">Import recent sleep</string>
+    <string name="action_import_date">Import a date</string>
+    <string name="action_add_screenshot">Add screenshot</string>
+    <string name="action_delete_sleep">Delete sleep data</string>
+    <string name="action_delete_screenshot">Delete screenshot</string>
+    <string name="action_pick_start">Start</string>
+    <string name="action_pick_end">End</string>
+    <string name="field_bedtime">Bedtime</string>
+    <string name="field_wake">Wake</string>
+
+    <string name="level_very_free">Very free</string>
+    <string name="level_free">Free</string>
+    <string name="level_doing">Doing</string>
+    <string name="level_busy">Busy</string>
+    <string name="level_afk">AFK</string>
+    <string name="level_unknown">Unknown</string>
+
+    <string name="slot_breakfast">Breakfast</string>
+    <string name="slot_lunch">Lunch</string>
+    <string name="slot_dinner">Dinner</string>
+    <string name="slot_unknown">Meal</string>
+
+    <string name="stage_awake">Awake</string>
+    <string name="stage_light">Light</string>
+    <string name="stage_deep">Deep</string>
+    <string name="stage_rem">REM</string>
+    <string name="stage_unknown">Unknown</string>
+
+    <string name="field_content">Content</string>
+    <string name="field_server">Server address</string>
+    <string name="field_token">Upload token</string>
+    <string name="field_name">Name</string>
+    <string name="field_url">URL</string>
+    <string name="field_duration">Duration (minutes)</string>
+    <string name="switch_still_current">Still current</string>
+
+    <string name="time_range">%1$s – %2$s</string>
+    <string name="time_range_open">%1$s – now</string>
+    <string name="duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="duration_minutes">%1$dm</string>
+    <string name="list_separator"> · </string>
+    <string name="meal_photo_description">%1$s on %2$s</string>
+    <string name="sleep_screenshot_description">Sleep screenshot for %1$s</string>
+    <string name="selected_photo_description">Selected photo</string>
+
+    <string name="empty_list">None yet</string>
+
+    <string name="dialog_remove_phrase">Remove this phrase?</string>
+    <string name="dialog_delete_status">Delete this status?</string>
+    <string name="dialog_delete_meal">Delete this meal?</string>
+    <string name="dialog_delete_sleep">Delete sleep data?</string>
+    <string name="dialog_delete_screenshot">Delete this screenshot?</string>
+    <string name="dialog_delete_calendar">Delete this subscription?</string>
+    <string name="dialog_add_calendar">Add subscription</string>
+
+    <string name="message_saved">Saved</string>
+    <string name="error_settings_missing">Settings are missing.</string>
+    <string name="error_token_rejected">The token was rejected.</string>
+    <string name="error_overlap">That time overlaps another status.</string>
+    <string name="error_invalid">That update is not valid.</string>
+    <string name="error_not_found">That item is gone.</string>
+    <string name="error_exists">That meal already exists.</string>
+    <string name="error_unreachable">Could not reach the server.</string>
+    <string name="error_health_unavailable">Health Connect is unavailable.</string>
+    <string name="error_no_sleep">No sleep sessions in that range.</string>
+    <string name="error_bad_url">Enter an http or https URL.</string>
+    <string name="error_permission_denied">Sleep permission was denied.</string>
+    <string name="error_photo">Could not read that photo.</string>
 </resources>
