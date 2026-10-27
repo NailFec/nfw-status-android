@@ -1,0 +1,68 @@
+
+---
+description: Enforces Jetpack Compose best practices including unidirectional data flow, state hoisting, ViewModel integration, Material 3 theming, Navigation Compose, modifier conventions, and preview testing. Provides guidelines for modern declarative Android UI development.
+globs: **/*.kt
+---
+# Jetpack Compose Best Practices
+
+You are an expert in Jetpack Compose, Android UI development, and Kotlin.
+You understand declarative UI, unidirectional data flow, recomposition optimization, and Material Design 3.
+
+### Project Structure
+- /ui/screens — top-level composable screens, one per destination
+- /ui/components — reusable composable UI components (buttons, cards, inputs)
+- /ui/theme — Material 3 theme, colors, typography, shapes
+- /ui/navigation — NavHost setup, route definitions, navigation actions
+- /data — repositories, data sources, models
+- /viewmodel — ViewModel classes holding UI state as StateFlow
+- /util — extension functions, composable helpers, preview data
+
+### Composable Functions & State
+- Hoist state to the highest common ancestor that needs it
+- Pass state down via parameters, events up via lambdas
+- Use remember { mutableStateOf() } for local ephemeral state only
+- Derive UI state from a single source of truth in the ViewModel
+- Expose state as StateFlow, collect with collectAsStateWithLifecycle()
+- Never mutate state during composition — use LaunchedEffect or SideEffect
+
+### ViewModel & Lifecycle
+- Extend ViewModel(); inject repositories via constructor
+- Expose UI state as a single data class: data class PostsUiState(val posts: List<Post>, val isLoading: Boolean)
+- Use viewModel() or hiltViewModel() to obtain ViewModel in composables
+- Use SavedStateHandle for surviving process death
+- Scope coroutines to viewModelScope; cancel automatically on clear
+
+### Material 3 Theming
+- Define MaterialTheme with custom colorScheme, typography, shapes
+- Use MaterialTheme.colorScheme.primary (never hardcode colors)
+- Support dynamic colors with dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+- Use Surface, Scaffold, TopAppBar, NavigationBar for layout structure
+- Apply Modifier.semantics for accessibility
+
+### Navigation
+- Use NavHost with composable() route builder and type-safe navigation
+- Pass arguments via route placeholders: composable("post/{postId}")
+- Never pass complex objects as nav arguments — pass IDs, load data in ViewModel
+- Avoid nested NavHosts; use a single NavHost with nested navigation graphs
+- Navigate from ViewModel via savedStateHandle or exposed navigation lambdas
+
+### Modifiers & Layout
+- Order modifiers correctly: size → padding → background → clickable
+- Use Modifier.fillMaxWidth(), .weight(), .padding() for responsive layouts
+- Use LazyColumn/LazyRow for scrollable lists; provide stable keys
+- Use AnimatedVisibility and animateContentSize for transitions
+- Extract complex modifier chains into extension functions
+
+### Performance & Recomposition
+- Mark composable functions as restartable and skippable by providing stable params
+- Use derivedStateOf for expensive derived calculations
+- Avoid unstable parameters — use data classes or @Stable annotation
+- Keep composable functions small and focused; split large screens into components
+- Use @ReadOnlyComposable for composables that don't emit into composition
+
+### Testing & Previews
+- Annotate composables with @Preview for rapid iteration
+- Provide PreviewParameterProvider for stateful previews
+- Write Compose UI tests with createComposeRule() and onNodeWithText()
+- Test ViewModels with Turbine for StateFlow assertions
+- Use fake repositories for ViewModel unit tests
