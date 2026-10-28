@@ -21,8 +21,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,7 +40,6 @@ import com.nailfec.nfwstatus.presentation.common.ConfirmDialog
 @Composable
 fun CalendarsScreen(
     onMessage: (String) -> Unit,
-    onBindAdd: (() -> Unit) -> Unit,
     viewModel: CalendarsViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
@@ -51,10 +52,6 @@ fun CalendarsScreen(
             }
         }
     }
-    DisposableEffect(onBindAdd, viewModel) {
-        onBindAdd { viewModel.onEvent(CalendarsUiEvent.AddOpened) }
-        onDispose { }
-    }
     CalendarsContent(state = state, onEvent = viewModel::onEvent, modifier = modifier)
 }
 
@@ -64,25 +61,29 @@ private fun CalendarsContent(
     onEvent: (CalendarsUiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    PullToRefreshBox(
-        isRefreshing = state.isLoading,
-        onRefresh = { onEvent(CalendarsUiEvent.Refresh) },
-        modifier = modifier.fillMaxSize(),
-    ) {
-        Column(Modifier.fillMaxSize()) {
-            if (state.isSaving || state.isRefreshingFeed) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-            Button(
-                onClick = { onEvent(CalendarsUiEvent.RefreshSchedule) },
-                enabled = !state.isRefreshingFeed && !state.isSaving,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            ) {
-                Text(stringResource(R.string.action_refresh_schedule))
-            }
-            LazyColumn(modifier = Modifier.weight(1f)) {
+    Box(modifier.fillMaxSize()) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = { onEvent(CalendarsUiEvent.Refresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                if (state.isSaving || state.isRefreshingFeed) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+                Button(
+                    onClick = { onEvent(CalendarsUiEvent.RefreshSchedule) },
+                    enabled = !state.isRefreshingFeed && !state.isSaving,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                ) {
+                    Text(stringResource(R.string.action_refresh_schedule))
+                }
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 96.dp),
+                ) {
                 if (state.subscriptions.isEmpty()) {
                     item(key = "empty", contentType = "empty") {
                         Text(
@@ -102,7 +103,19 @@ private fun CalendarsContent(
                     }
                     CalendarRow(item = item, onDelete = onDelete)
                 }
+                }
             }
+        }
+        MediumFloatingActionButton(
+            onClick = { onEvent(CalendarsUiEvent.AddOpened) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = stringResource(R.string.action_add),
+            )
         }
     }
     if (state.showAdd) {
@@ -178,14 +191,5 @@ private fun CalendarRow(
                 )
             }
         },
-    )
-}
-
-@Composable
-fun CalendarAddIcon(modifier: Modifier = Modifier) {
-    Icon(
-        imageVector = Icons.Filled.Add,
-        contentDescription = stringResource(R.string.action_add),
-        modifier = modifier,
     )
 }

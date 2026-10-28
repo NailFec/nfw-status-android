@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import com.nailfec.nfwstatus.data.settings.SettingsRepository
 import com.nailfec.nfwstatus.model.CalendarSubscription
+import com.nailfec.nfwstatus.model.HistoryDay
+import com.nailfec.nfwstatus.model.HistoryPage
 import com.nailfec.nfwstatus.model.Meal
 import com.nailfec.nfwstatus.model.MealPhoto
 import com.nailfec.nfwstatus.model.Phrase
@@ -24,6 +26,39 @@ class NfwRepository @Inject constructor(
     private val settings: SettingsRepository,
     @ApplicationContext private val context: Context,
 ) {
+    suspend fun getHistory(end: String?): NetworkResult<HistoryPage> = authed(requireToken = false) { creds ->
+        api.getHistory(creds, end).map { page ->
+            HistoryPage(
+                timezone = page.timezone,
+                now = page.now,
+                days = page.days.map { day ->
+                    HistoryDay(
+                        day = day.day,
+                        segments = day.segments.map { segment ->
+                            StatusSegment(
+                                id = segment.id,
+                                level = segment.level,
+                                content = segment.content,
+                                startedAt = segment.startedAt,
+                                endedAt = segment.endedAt,
+                            )
+                        },
+                    )
+                },
+                hasMore = page.hasMore,
+                current = page.current?.let {
+                    StatusSegment(
+                        id = it.id,
+                        level = it.level,
+                        content = it.content,
+                        startedAt = it.startedAt,
+                        endedAt = null,
+                    )
+                },
+            )
+        }
+    }
+
     suspend fun getSegments(): NetworkResult<List<StatusSegment>> = authed(requireToken = false) { creds ->
         api.getStatus(creds).map { list ->
             list.segments.map {
@@ -111,6 +146,10 @@ class NfwRepository @Inject constructor(
         }
     }
 
+    suspend fun getSleepDates(): NetworkResult<Set<String>> = authed(requireToken = false) { creds ->
+        api.getSleepDates(creds).map { it.dates.toSet() }
+    }
+
     suspend fun upsertSleep(upload: SleepUpload): NetworkResult<Unit> = authed(requireToken = true) { creds ->
         api.postSleep(
             creds,
@@ -122,15 +161,6 @@ class NfwRepository @Inject constructor(
                 stages = upload.stages.map { StageDto(it.stage, it.start, it.end) },
             ),
         )
-    }
-
-    suspend fun updateSleep(
-        date: String,
-        bedtime: String,
-        wakeTime: String,
-        durationMinutes: Int,
-    ): NetworkResult<Unit> = authed(requireToken = true) {
-        api.patchSleep(it, date, SleepPatchDto(bedtime, wakeTime, durationMinutes))
     }
 
     suspend fun deleteSleep(date: String): NetworkResult<Unit> =

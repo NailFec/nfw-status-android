@@ -45,6 +45,7 @@ data class MealsUiState(
     val meals: List<MealUi> = emptyList(),
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val composerOpen: Boolean = false,
     val editor: MealEditor? = null,
     val activePicker: MealPicker? = null,
     val pendingDeleteId: String? = null,
@@ -64,6 +65,8 @@ sealed interface MealsUiEvent {
     data class RemoveEditorPhoto(val uri: String) : MealsUiEvent
     data class RemoveExistingPhoto(val id: String) : MealsUiEvent
     data object Save : MealsUiEvent
+    data object ComposerOpened : MealsUiEvent
+    data object ComposerDismissed : MealsUiEvent
     data object SaveEdit : MealsUiEvent
     data object Refresh : MealsUiEvent
     data object ScreenShown : MealsUiEvent

@@ -5,11 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.nailfec.nfwstatus.R
 import com.nailfec.nfwstatus.data.remote.NetworkResult
 import com.nailfec.nfwstatus.data.remote.NfwRepository
+import com.nailfec.nfwstatus.model.HistoryPage
 import com.nailfec.nfwstatus.model.Level
 import com.nailfec.nfwstatus.model.StatusSegment
 import com.nailfec.nfwstatus.presentation.common.messageRes
 import com.nailfec.nfwstatus.util.TimeFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +49,9 @@ class StatusViewModel @Inject constructor(
             StatusUiEvent.PhraseRemoveConfirmed -> confirmPhraseDelete()
             StatusUiEvent.Save -> save()
             StatusUiEvent.Refresh -> refresh()
+            StatusUiEvent.LoadOlder -> loadOlder()
+            StatusUiEvent.ComposerOpened -> _state.update { it.copy(composerOpen = true) }
+            StatusUiEvent.ComposerDismissed -> _state.update { it.copy(composerOpen = false, activePicker = null) }
             is StatusUiEvent.EditRequested -> openEditor(event.id)
             StatusUiEvent.EditDismissed -> _state.update { it.copy(editor = null, activePicker = null) }
             is StatusUiEvent.EditorLevelSelected -> updateEditor { it.copy(level = event.level) }
@@ -67,34 +75,113 @@ class StatusViewModel @Inject constructor(
     }
 
     private fun refresh() {
-        viewModelScope.launch { load() }
+        viewModelScope.launch { load(reset = true) }
     }
 
-    private suspend fun load() {
-        _state.update { it.copy(isLoading = true) }
-        val segments = repository.getSegments()
-        val phrases = repository.getPhrases()
+    private fun loadOlder() {
+        viewModelScope.launch { load(reset = false) }
+    }
+
+    private suspend fun load(reset: Boolean) {
+        val snapshot = _state.value
+        if (!reset && (!snapshot.hasMore || snapshot.isLoadingMore || snapshot.isLoading)) return
+        val end = if (reset) {
+            null
+        } else {
+            val oldest = snapshot.days.lastOrNull()?.day ?: return
+            LocalDate.parse(oldest).minusDays(1).toString()
+        }
+        _state.update {
+            if (reset) it.copy(isLoading = true) else it.copy(isLoadingMore = true)
+        }
+        val history = repository.getHistory(end)
+        val phrases = if (reset) repository.getPhrases() else null
         _state.update { current ->
-            current.copy(
-                isLoading = false,
-                segments = when (segments) {
-                    is NetworkResult.Success -> segments.value.map { it.toUi() }
-                    is NetworkResult.Failure -> current.segments
-                },
-                phrases = when (phrases) {
-                    is NetworkResult.Success -> phrases.value.map { PhraseUi(it.id, it.text) }
-                    is NetworkResult.Failure -> current.phrases
-                },
-            )
+            when (history) {
+                is NetworkResult.Success -> {
+                    val built = builtPage(history.value)
+                    current.copy(
+                        isLoading = false,
+                        isLoadingMore = false,
+                        hasMore = history.value.hasMore,
+                        current = if (reset) built.current else current.current,
+                        days = if (reset) built.days else current.days + built.days,
+                        segments = if (reset) built.segments else mergeSegments(current.segments, built.segments),
+                        phrases = when (phrases) {
+                            is NetworkResult.Success -> phrases.value.map { PhraseUi(it.id, it.text) }
+                            else -> current.phrases
+                        },
+                    )
+                }
+                is NetworkResult.Failure -> current.copy(isLoading = false, isLoadingMore = false)
+            }
         }
         val failure = when {
-            segments is NetworkResult.Failure -> segments.kind
+            history is NetworkResult.Failure -> history.kind
             phrases is NetworkResult.Failure -> phrases.kind
             else -> null
         }
         if (failure != null) {
             _effects.send(StatusUiEffect.ShowMessage(failure.messageRes()))
         }
+    }
+
+    private fun builtPage(page: HistoryPage): BuiltPage {
+        val zone = runCatching { ZoneId.of(page.timezone) }.getOrDefault(ZoneId.systemDefault())
+        val now = TimeFormat.parseInstant(page.now) ?: Instant.now()
+        val days = page.days.asReversed().map { day ->
+            StatusDayUi(
+                day = day.day,
+                label = TimeFormat.formatDate(day.day),
+                slices = slicesFor(day.day, zone, day.segments, now),
+            )
+        }
+        val segments = page.days
+            .flatMap { it.segments }
+            .distinctBy { it.id }
+            .map { it.toUi() }
+        val current = page.current?.let {
+            CurrentStatusUi(
+                id = it.id,
+                level = Level.fromWire(it.level),
+                content = it.content,
+                startedAt = it.startedAt,
+                startLabel = TimeFormat.formatIso(it.startedAt),
+            )
+        }
+        return BuiltPage(days, segments, current)
+    }
+
+    private fun slicesFor(
+        day: String,
+        zone: ZoneId,
+        segments: List<StatusSegment>,
+        now: Instant,
+    ): List<StatusSliceUi> {
+        val date = runCatching { LocalDate.parse(day) }.getOrNull() ?: return emptyList()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        val span = Duration.between(start, end).toMillis().toFloat().coerceAtLeast(1f)
+        return segments.mapNotNull { segment ->
+            val segmentStart = TimeFormat.parseInstant(segment.startedAt) ?: return@mapNotNull null
+            val segmentEnd = segment.endedAt?.let(TimeFormat::parseInstant) ?: now
+            val visibleStart = if (segmentStart.isAfter(start)) segmentStart else start
+            val visibleEnd = if (segmentEnd.isBefore(end)) segmentEnd else end
+            if (!visibleEnd.isAfter(visibleStart)) return@mapNotNull null
+            StatusSliceUi(
+                id = segment.id,
+                level = Level.fromWire(segment.level),
+                start = (Duration.between(start, visibleStart).toMillis() / span).coerceIn(0f, 1f),
+                end = (Duration.between(start, visibleEnd).toMillis() / span).coerceIn(0f, 1f),
+            )
+        }
+    }
+
+    private fun mergeSegments(existing: List<SegmentUi>, extra: List<SegmentUi>): List<SegmentUi> {
+        val merged = LinkedHashMap<String, SegmentUi>()
+        for (segment in existing) merged[segment.id] = segment
+        for (segment in extra) merged[segment.id] = segment
+        return merged.values.toList()
     }
 
     private fun save() {
@@ -104,9 +191,9 @@ class StatusViewModel @Inject constructor(
             _state.update { it.copy(isSaving = true) }
             when (val result = repository.createSegment(snapshot.level.wire, snapshot.content.trim())) {
                 is NetworkResult.Success -> {
-                    _state.update { it.copy(isSaving = false, content = "") }
+                    _state.update { it.copy(isSaving = false, content = "", composerOpen = false) }
                     _effects.send(StatusUiEffect.ShowMessage(R.string.message_saved))
-                    load()
+                    load(reset = true)
                 }
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(isSaving = false) }
@@ -117,17 +204,21 @@ class StatusViewModel @Inject constructor(
     }
 
     private fun openEditor(id: String) {
-        val segment = _state.value.segments.find { it.id == id } ?: return
-        val start = TimeFormat.parse(segment.startedAt) ?: run {
+        val segment = _state.value.segments.find { it.id == id }
+        val current = _state.value.current?.takeIf { it.id == id }
+        val startedAt = segment?.startedAt ?: current?.startedAt ?: return
+        val level = segment?.level ?: current?.level
+        val content = segment?.content ?: current?.content ?: ""
+        val start = TimeFormat.parse(startedAt) ?: run {
             viewModelScope.launch { _effects.send(StatusUiEffect.ShowMessage(R.string.error_invalid)) }
             return
         }
         _state.update {
             it.copy(
                 editor = SegmentEditor(
-                    id = segment.id,
-                    level = segment.level ?: Level.FREE,
-                    content = segment.content,
+                    id = id,
+                    level = level ?: Level.FREE,
+                    content = content,
                     startDate = start.date.toString(),
                     startHour = start.time.hour,
                     startMinute = start.time.minute,
@@ -175,7 +266,7 @@ class StatusViewModel @Inject constructor(
                 is NetworkResult.Success -> {
                     _state.update { it.copy(isSaving = false, editor = null, activePicker = null) }
                     _effects.send(StatusUiEffect.ShowMessage(R.string.message_saved))
-                    load()
+                    load(reset = true)
                 }
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(isSaving = false) }
@@ -188,12 +279,12 @@ class StatusViewModel @Inject constructor(
     private fun confirmDelete() {
         val id = _state.value.pendingDeleteSegmentId ?: return
         viewModelScope.launch {
-            _state.update { it.copy(pendingDeleteSegmentId = null, isSaving = true) }
+            _state.update { it.copy(pendingDeleteSegmentId = null, isSaving = true, editor = null, activePicker = null) }
             when (val result = repository.deleteSegment(id)) {
                 is NetworkResult.Success -> {
                     _state.update { it.copy(isSaving = false) }
                     _effects.send(StatusUiEffect.ShowMessage(R.string.message_saved))
-                    load()
+                    load(reset = true)
                 }
                 is NetworkResult.Failure -> {
                     _state.update { it.copy(isSaving = false) }
@@ -210,7 +301,7 @@ class StatusViewModel @Inject constructor(
             when (val result = repository.deletePhrase(id)) {
                 is NetworkResult.Success -> {
                     _effects.send(StatusUiEffect.ShowMessage(R.string.message_saved))
-                    load()
+                    load(reset = true)
                 }
                 is NetworkResult.Failure ->
                     _effects.send(StatusUiEffect.ShowMessage(result.kind.messageRes()))
@@ -226,4 +317,10 @@ class StatusViewModel @Inject constructor(
         endLabel = endedAt?.let(TimeFormat::formatIso),
         startedAt = startedAt,
     )
+
+private data class BuiltPage(
+    val days: List<StatusDayUi>,
+    val segments: List<SegmentUi>,
+    val current: CurrentStatusUi?,
+)
 }

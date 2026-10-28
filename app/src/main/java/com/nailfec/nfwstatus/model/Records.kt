@@ -8,6 +8,19 @@ data class StatusSegment(
     val endedAt: String?,
 )
 
+data class HistoryDay(
+    val day: String,
+    val segments: List<StatusSegment>,
+)
+
+data class HistoryPage(
+    val timezone: String,
+    val now: String,
+    val days: List<HistoryDay>,
+    val hasMore: Boolean,
+    val current: StatusSegment?,
+)
+
 data class Phrase(
     val id: String,
     val text: String,

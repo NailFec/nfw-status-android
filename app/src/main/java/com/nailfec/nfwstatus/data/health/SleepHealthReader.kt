@@ -52,6 +52,12 @@ class SleepHealthReader @Inject constructor(
         }
     }
 
+    suspend fun readAll(): SleepRead {
+        val zone = ZoneId.systemDefault()
+        val start = LocalDate.of(2000, 1, 1).atStartOfDay(zone).toInstant()
+        return readGrouped(start, Instant.now()) { true }
+    }
+
     suspend fun readRecent(): SleepRead {
         val end = Instant.now()
         val start = end.minus(36, ChronoUnit.HOURS)

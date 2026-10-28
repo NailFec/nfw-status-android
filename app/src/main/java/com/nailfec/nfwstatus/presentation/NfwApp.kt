@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -42,7 +41,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.nailfec.nfwstatus.R
-import com.nailfec.nfwstatus.presentation.calendars.CalendarAddIcon
 import com.nailfec.nfwstatus.presentation.calendars.CalendarsScreen
 import com.nailfec.nfwstatus.presentation.meals.MealsScreen
 import com.nailfec.nfwstatus.presentation.settings.SettingsScreen
@@ -61,10 +59,6 @@ fun NfwApp(modifier: Modifier = Modifier) {
             scope.launch { snackbarHostState.showSnackbar(message) }
             Unit
         }
-    }
-    val addAction = remember { mutableStateOf<() -> Unit>({}) }
-    val onBindAdd = remember {
-        { action: () -> Unit -> addAction.value = action }
     }
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
@@ -95,11 +89,6 @@ fun NfwApp(modifier: Modifier = Modifier) {
                 },
                 actions = {
                     if (!showSettings) {
-                        if (showCalendars) {
-                            IconButton(onClick = { addAction.value.invoke() }) {
-                                CalendarAddIcon()
-                            }
-                        }
                         IconButton(onClick = {
                             navController.navigate(SettingsRoute) { launchSingleTop = true }
                         }) {
@@ -188,10 +177,7 @@ fun NfwApp(modifier: Modifier = Modifier) {
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None },
             ) {
-                CalendarsScreen(
-                    onMessage = onMessage,
-                    onBindAdd = onBindAdd,
-                )
+                CalendarsScreen(onMessage = onMessage)
             }
             composable<SettingsRoute>(
                 enterTransition = { EnterTransition.None },

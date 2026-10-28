@@ -2,7 +2,6 @@ package com.nailfec.nfwstatus.presentation.sleep
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
-import com.nailfec.nfwstatus.util.TimeFormat
 
 @Immutable
 data class SleepDayUi(
@@ -16,33 +15,16 @@ data class SleepDayUi(
     val stages: List<String>,
 )
 
-enum class SleepPicker { ViewedDate, ImportDate, BedDate, BedTime, WakeDate, WakeTime }
+enum class SleepPicker { ImportDate }
 
-enum class PendingImport { Recent, Date }
+enum class PendingImport { Recent, Date, All }
 
 @Immutable
-data class SleepEditor(
-    val date: String,
-    val bedDate: String,
-    val bedHour: Int,
-    val bedMinute: Int,
-    val wakeDate: String,
-    val wakeHour: Int,
-    val wakeMinute: Int,
-    val durationText: String,
-) {
-    fun recomputed(): SleepEditor {
-        val minutes = TimeFormat.minutesBetween(
-            bedDate,
-            bedHour,
-            bedMinute,
-            wakeDate,
-            wakeHour,
-            wakeMinute,
-        )
-        return if (minutes == null) this else copy(durationText = minutes.toString())
-    }
-}
+data class ImportProgress(
+    val reading: Boolean,
+    val completed: Int,
+    val total: Int,
+)
 
 @Immutable
 data class SleepUiState(
@@ -51,7 +33,7 @@ data class SleepUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val isImporting: Boolean = false,
-    val editor: SleepEditor? = null,
+    val importProgress: ImportProgress? = null,
     val activePicker: SleepPicker? = null,
     val pendingImport: PendingImport? = null,
     val pendingDeleteDate: String? = null,
@@ -60,17 +42,12 @@ data class SleepUiState(
 sealed interface SleepUiEvent {
     data object Refresh : SleepUiEvent
     data object ImportRecent : SleepUiEvent
+    data object ImportAll : SleepUiEvent
     data object ImportDateRequested : SleepUiEvent
     data class PermissionResult(val granted: Boolean) : SleepUiEvent
-    data class OpenPicker(val picker: SleepPicker) : SleepUiEvent
     data object DismissPicker : SleepUiEvent
     data class DatePicked(val utcMillis: Long) : SleepUiEvent
-    data class TimePicked(val hour: Int, val minute: Int) : SleepUiEvent
-    data class DurationChanged(val value: String) : SleepUiEvent
     data class SelectDate(val date: String) : SleepUiEvent
-    data class EditRequested(val date: String) : SleepUiEvent
-    data object EditDismissed : SleepUiEvent
-    data object SaveEdit : SleepUiEvent
     data class DeleteHealthRequested(val date: String) : SleepUiEvent
     data object DeleteHealthDismissed : SleepUiEvent
     data object DeleteHealthConfirmed : SleepUiEvent

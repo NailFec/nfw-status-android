@@ -18,10 +18,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.MediumFloatingActionButton
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -98,6 +102,7 @@ fun MealsScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MealsContent(
     state: MealsUiState,
@@ -106,32 +111,47 @@ private fun MealsContent(
     onEditPhotos: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    PullToRefreshBox(
-        isRefreshing = state.isLoading,
-        onRefresh = { onEvent(MealsUiEvent.Refresh) },
-        modifier = modifier.fillMaxSize(),
-    ) {
-        Column(Modifier.fillMaxSize()) {
-            if (state.isSaving) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-            MealComposer(state = state, onEvent = onEvent, onAddPhotos = onAddPhotos)
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                if (state.meals.isEmpty()) {
-                    item(key = "empty", contentType = "empty") {
-                        Text(
-                            text = stringResource(R.string.empty_list),
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
+    Box(modifier.fillMaxSize()) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = { onEvent(MealsUiEvent.Refresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                if (state.isSaving) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = 96.dp),
+                ) {
+                    if (state.meals.isEmpty()) {
+                        item(key = "empty", contentType = "empty") {
+                            Text(
+                                text = stringResource(R.string.empty_list),
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    }
+                    items(items = state.meals, key = { it.id }, contentType = { "meal" }) { meal ->
+                        val onEdit = remember(meal.id) { { onEvent(MealsUiEvent.EditRequested(meal.id)) } }
+                        val onDelete = remember(meal.id) { { onEvent(MealsUiEvent.DeleteRequested(meal.id)) } }
+                        MealRow(meal = meal, onEdit = onEdit, onDelete = onDelete)
                     }
                 }
-                items(items = state.meals, key = { it.id }, contentType = { "meal" }) { meal ->
-                    val onEdit = remember(meal.id) { { onEvent(MealsUiEvent.EditRequested(meal.id)) } }
-                    val onDelete = remember(meal.id) { { onEvent(MealsUiEvent.DeleteRequested(meal.id)) } }
-                    MealRow(meal = meal, onEdit = onEdit, onDelete = onDelete)
-                }
             }
+        }
+        MediumFloatingActionButton(
+            onClick = { onEvent(MealsUiEvent.ComposerOpened) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = stringResource(R.string.action_add),
+            )
         }
     }
     state.pendingDeleteId?.let {
@@ -150,6 +170,16 @@ private fun MealsContent(
             onAddPhotos = onEditPhotos,
         )
     }
+    if (state.composerOpen) {
+        ModalBottomSheet(onDismissRequest = { onEvent(MealsUiEvent.ComposerDismissed) }) {
+            MealComposer(
+                state = state,
+                onEvent = onEvent,
+                onAddPhotos = onAddPhotos,
+                modifier = Modifier.padding(bottom = 32.dp),
+            )
+        }
+    }
     MealPickers(state = state, onEvent = onEvent)
 }
 
@@ -160,15 +190,13 @@ private fun MealComposer(
     onAddPhotos: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
             MealSlotSelector(
                 selected = state.slot,
                 onSelect = { onEvent(MealsUiEvent.SlotSelected(it)) },
@@ -195,7 +223,6 @@ private fun MealComposer(
             ) {
                 Text(stringResource(R.string.action_save))
             }
-        }
     }
 }
 

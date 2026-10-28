@@ -40,27 +40,15 @@ class SleepViewModel @Inject constructor(
         when (event) {
             SleepUiEvent.Refresh -> refresh()
             SleepUiEvent.ImportRecent -> beginImport(PendingImport.Recent)
+            SleepUiEvent.ImportAll -> beginImport(PendingImport.All)
             SleepUiEvent.ImportDateRequested -> _state.update { it.copy(activePicker = SleepPicker.ImportDate) }
             is SleepUiEvent.PermissionResult -> onPermission(event.granted)
-            is SleepUiEvent.OpenPicker -> _state.update { it.copy(activePicker = event.picker) }
             SleepUiEvent.DismissPicker -> _state.update { it.copy(activePicker = null) }
             is SleepUiEvent.DatePicked -> applyDate(event.utcMillis)
-            is SleepUiEvent.TimePicked -> applyTime(event.hour, event.minute)
-            is SleepUiEvent.DurationChanged -> updateEditor { it.copy(durationText = event.value) }
             is SleepUiEvent.SelectDate -> _state.update { it.copy(viewedDate = event.date) }
-            is SleepUiEvent.EditRequested -> openEditor(event.date)
-            SleepUiEvent.EditDismissed -> _state.update { it.copy(editor = null, activePicker = null) }
-            SleepUiEvent.SaveEdit -> saveEdit()
             is SleepUiEvent.DeleteHealthRequested -> _state.update { it.copy(pendingDeleteDate = event.date) }
             SleepUiEvent.DeleteHealthDismissed -> _state.update { it.copy(pendingDeleteDate = null) }
             SleepUiEvent.DeleteHealthConfirmed -> confirmDeleteHealth()
-        }
-    }
-
-    private fun updateEditor(transform: (SleepEditor) -> SleepEditor) {
-        _state.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = transform(editor))
         }
     }
 
@@ -82,6 +70,7 @@ class SleepViewModel @Inject constructor(
     }
 
     private fun beginImport(mode: PendingImport) {
+        if (_state.value.isImporting) return
         viewModelScope.launch {
             if (!health.isAvailable()) {
                 _effects.send(SleepUiEffect.ShowMessage(R.string.error_health_unavailable))
@@ -110,13 +99,23 @@ class SleepViewModel @Inject constructor(
     }
 
     private suspend fun runImport(mode: PendingImport) {
-        _state.update { it.copy(isImporting = true) }
+        _state.update {
+            it.copy(
+                isImporting = true,
+                importProgress = if (mode == PendingImport.All) {
+                    ImportProgress(reading = true, completed = 0, total = 0)
+                } else {
+                    null
+                },
+            )
+        }
         val read = when (mode) {
             PendingImport.Recent -> health.readRecent()
+            PendingImport.All -> health.readAll()
             PendingImport.Date -> {
                 val date = runCatching { LocalDate.parse(_state.value.viewedDate) }.getOrNull()
                 if (date == null) {
-                    _state.update { it.copy(isImporting = false) }
+                    _state.update { it.copy(isImporting = false, importProgress = null) }
                     _effects.send(SleepUiEffect.ShowMessage(R.string.error_invalid))
                     return
                 }
@@ -124,11 +123,54 @@ class SleepViewModel @Inject constructor(
             }
         }
         when (read) {
-            is SleepRead.Found -> uploadAll(read.uploads)
+            is SleepRead.Found -> {
+                if (mode == PendingImport.All) uploadMissing(read.uploads) else uploadAll(read.uploads)
+            }
             SleepRead.Empty -> finishImport(R.string.error_no_sleep)
             SleepRead.Unavailable -> finishImport(R.string.error_health_unavailable)
             SleepRead.Denied -> finishImport(R.string.error_permission_denied)
         }
+    }
+
+    private suspend fun uploadMissing(uploads: List<SleepUpload>) {
+        val existing = when (val dates = repository.getSleepDates()) {
+            is NetworkResult.Success -> dates.value
+            is NetworkResult.Failure -> {
+                _state.update { it.copy(isImporting = false, importProgress = null) }
+                _effects.send(SleepUiEffect.ShowMessage(dates.kind.messageRes()))
+                return
+            }
+        }
+        val pending = uploads.filter { it.date !in existing }
+        if (pending.isEmpty()) {
+            finishImport(R.string.message_no_new_sleep)
+            return
+        }
+        _state.update {
+            it.copy(importProgress = ImportProgress(reading = false, completed = 0, total = pending.size))
+        }
+        pending.forEachIndexed { index, upload ->
+            when (val result = repository.upsertSleep(upload)) {
+                is NetworkResult.Success -> _state.update { state ->
+                    state.copy(
+                        importProgress = ImportProgress(
+                            reading = false,
+                            completed = index + 1,
+                            total = pending.size,
+                        ),
+                    )
+                }
+                is NetworkResult.Failure -> {
+                    _state.update { it.copy(isImporting = false, importProgress = null) }
+                    _effects.send(SleepUiEffect.ShowMessage(result.kind.messageRes()))
+                    load()
+                    return
+                }
+            }
+        }
+        _state.update { it.copy(isImporting = false, importProgress = null) }
+        _effects.send(SleepUiEffect.ShowMessage(R.string.message_saved))
+        load()
     }
 
     private suspend fun uploadAll(uploads: List<SleepUpload>) {
@@ -136,115 +178,31 @@ class SleepViewModel @Inject constructor(
             when (val result = repository.upsertSleep(upload)) {
                 is NetworkResult.Success -> Unit
                 is NetworkResult.Failure -> {
-                    _state.update { it.copy(isImporting = false) }
+                    _state.update { it.copy(isImporting = false, importProgress = null) }
                     _effects.send(SleepUiEffect.ShowMessage(result.kind.messageRes()))
                     load()
                     return
                 }
             }
         }
-        _state.update { it.copy(isImporting = false) }
+        _state.update { it.copy(isImporting = false, importProgress = null) }
         _effects.send(SleepUiEffect.ShowMessage(R.string.message_saved))
         load()
     }
 
     private suspend fun finishImport(messageRes: Int) {
-        _state.update { it.copy(isImporting = false) }
+        _state.update { it.copy(isImporting = false, importProgress = null) }
         _effects.send(SleepUiEffect.ShowMessage(messageRes))
     }
 
     private fun applyDate(utcMillis: Long) {
-        val picker = _state.value.activePicker
         val date = TimeFormat.dateFromUtcMillis(utcMillis).toString()
-        when (picker) {
-            SleepPicker.ViewedDate -> _state.update { it.copy(viewedDate = date, activePicker = null) }
-            SleepPicker.ImportDate -> {
-                _state.update { it.copy(viewedDate = date, activePicker = null) }
-                beginImport(PendingImport.Date)
-            }
-            SleepPicker.BedDate -> {
-                updateEditor { it.copy(bedDate = date).recomputed() }
-                _state.update { it.copy(activePicker = null) }
-            }
-            SleepPicker.WakeDate -> {
-                updateEditor { it.copy(wakeDate = date).recomputed() }
-                _state.update { it.copy(activePicker = null) }
-            }
-            else -> _state.update { it.copy(activePicker = null) }
-        }
-    }
-
-    private fun applyTime(hour: Int, minute: Int) {
-        when (_state.value.activePicker) {
-            SleepPicker.BedTime -> {
-                updateEditor { it.copy(bedHour = hour, bedMinute = minute).recomputed() }
-                _state.update { it.copy(activePicker = null) }
-            }
-            SleepPicker.WakeTime -> {
-                updateEditor { it.copy(wakeHour = hour, wakeMinute = minute).recomputed() }
-                _state.update { it.copy(activePicker = null) }
-            }
-            else -> _state.update { it.copy(activePicker = null) }
-        }
-    }
-
-    private fun openEditor(date: String) {
-        val day = _state.value.days.find { it.date == date } ?: return
-        val bed = day.bedtime?.let(TimeFormat::parse)
-        val wake = day.wakeTime?.let(TimeFormat::parse)
-        if (bed == null || wake == null) {
-            viewModelScope.launch { _effects.send(SleepUiEffect.ShowMessage(R.string.error_invalid)) }
+        if (_state.value.activePicker != SleepPicker.ImportDate) {
+            _state.update { it.copy(activePicker = null) }
             return
         }
-        _state.update {
-            it.copy(
-                viewedDate = date,
-                editor = SleepEditor(
-                    date = date,
-                    bedDate = bed.date.toString(),
-                    bedHour = bed.time.hour,
-                    bedMinute = bed.time.minute,
-                    wakeDate = wake.date.toString(),
-                    wakeHour = wake.time.hour,
-                    wakeMinute = wake.time.minute,
-                    durationText = (day.durationMinutes ?: TimeFormat.minutesBetween(
-                        bed.date.toString(),
-                        bed.time.hour,
-                        bed.time.minute,
-                        wake.date.toString(),
-                        wake.time.hour,
-                        wake.time.minute,
-                    ) ?: 0).toString(),
-                ),
-                activePicker = null,
-            )
-        }
-    }
-
-    private fun saveEdit() {
-        val editor = _state.value.editor ?: return
-        if (_state.value.isSaving) return
-        val minutes = editor.durationText.trim().toIntOrNull()
-        val bedtime = TimeFormat.toIso(editor.bedDate, editor.bedHour, editor.bedMinute)
-        val wake = TimeFormat.toIso(editor.wakeDate, editor.wakeHour, editor.wakeMinute)
-        if (minutes == null || bedtime == null || wake == null) {
-            viewModelScope.launch { _effects.send(SleepUiEffect.ShowMessage(R.string.error_invalid)) }
-            return
-        }
-        viewModelScope.launch {
-            _state.update { it.copy(isSaving = true) }
-            when (val result = repository.updateSleep(editor.date, bedtime, wake, minutes)) {
-                is NetworkResult.Success -> {
-                    _state.update { it.copy(isSaving = false, editor = null, activePicker = null) }
-                    _effects.send(SleepUiEffect.ShowMessage(R.string.message_saved))
-                    load()
-                }
-                is NetworkResult.Failure -> {
-                    _state.update { it.copy(isSaving = false) }
-                    _effects.send(SleepUiEffect.ShowMessage(result.kind.messageRes()))
-                }
-            }
-        }
+        _state.update { it.copy(viewedDate = date, activePicker = null) }
+        beginImport(PendingImport.Date)
     }
 
     private fun confirmDeleteHealth() {

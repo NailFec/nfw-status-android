@@ -24,6 +24,29 @@ data class CreateStatusDto(
 )
 
 @Serializable
+data class HistoryPageDto(
+    val timezone: String = "Asia/Shanghai",
+    val now: String,
+    val days: List<HistoryDayDto> = emptyList(),
+    val hasMore: Boolean = false,
+    val current: CurrentStatusDto? = null,
+)
+
+@Serializable
+data class HistoryDayDto(
+    val day: String,
+    val segments: List<SegmentDto> = emptyList(),
+)
+
+@Serializable
+data class CurrentStatusDto(
+    @Serializable(with = FlexibleIdSerializer::class) val id: String,
+    val level: String,
+    val content: String = "",
+    val startedAt: String,
+)
+
+@Serializable
 data class PatchStatusDto(
     val level: String,
     val content: String,
@@ -87,11 +110,7 @@ data class SleepPostDto(
 )
 
 @Serializable
-data class SleepPatchDto(
-    val bedtime: String,
-    val wakeTime: String,
-    val durationMinutes: Int,
-)
+data class SleepDatesDto(val dates: List<String> = emptyList())
 
 @Serializable
 data class CalendarListDto(val subscriptions: List<CalendarDto> = emptyList())

@@ -31,6 +31,11 @@ object TimeFormat {
         return Stamp(now.toLocalDate(), LocalTime.of(now.hour, now.minute))
     }
 
+    fun parseInstant(iso: String): Instant? =
+        runCatching { OffsetDateTime.parse(iso).toInstant() }.getOrNull()
+            ?: runCatching { ZonedDateTime.parse(iso).toInstant() }.getOrNull()
+            ?: runCatching { Instant.parse(iso) }.getOrNull()
+
     fun parse(iso: String): Stamp? {
         val zoned = runCatching { OffsetDateTime.parse(iso).atZoneSameInstant(zone) }.getOrNull()
             ?: runCatching { ZonedDateTime.parse(iso).withZoneSameInstant(zone) }.getOrNull()

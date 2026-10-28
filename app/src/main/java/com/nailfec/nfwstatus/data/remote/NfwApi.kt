@@ -30,6 +30,15 @@ class NfwApi @Inject constructor(
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
+    suspend fun getHistory(creds: Credentials, end: String?): NetworkResult<HistoryPageDto> {
+        val path = if (end == null) {
+            "/api/history?limit=100"
+        } else {
+            "/api/history?end=$end&limit=100"
+        }
+        return get(creds, path, auth = false)
+    }
+
     suspend fun getStatus(creds: Credentials): NetworkResult<StatusListDto> =
         get(creds, "/api/status?limit=100", auth = false)
 
@@ -104,18 +113,11 @@ class NfwApi @Inject constructor(
     suspend fun getSleep(creds: Credentials): NetworkResult<SleepListDto> =
         get(creds, "/api/sleep?limit=30", auth = false)
 
+    suspend fun getSleepDates(creds: Credentials): NetworkResult<SleepDatesDto> =
+        get(creds, "/api/sleep?fields=date", auth = false)
+
     suspend fun postSleep(creds: Credentials, body: SleepPostDto): NetworkResult<Unit> =
         sendJson(creds, "/api/sleep", body, upload = false)
-
-    suspend fun patchSleep(creds: Credentials, date: String, body: SleepPatchDto): NetworkResult<Unit> =
-        sendEmpty(
-            creds,
-            "/api/sleep/$date",
-            "PATCH",
-            json.encodeToString(body).toJsonBody(),
-            auth = true,
-            upload = false,
-        )
 
     suspend fun deleteSleep(creds: Credentials, date: String): NetworkResult<Unit> =
         sendEmpty(creds, "/api/sleep/$date", "DELETE", null, auth = true, upload = false)

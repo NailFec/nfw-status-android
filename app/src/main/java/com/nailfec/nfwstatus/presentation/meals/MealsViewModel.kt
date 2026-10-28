@@ -54,6 +54,10 @@ class MealsViewModel @Inject constructor(
                     editor.copy(removedPhotoIds = editor.removedPhotoIds + event.id)
                 }
             MealsUiEvent.Save -> save()
+            MealsUiEvent.ComposerOpened -> _state.update { it.copy(composerOpen = true) }
+            MealsUiEvent.ComposerDismissed -> _state.update {
+                it.copy(composerOpen = false, activePicker = null)
+            }
             MealsUiEvent.SaveEdit -> saveEdit()
             MealsUiEvent.Refresh -> refresh()
             MealsUiEvent.ScreenShown -> {
@@ -107,6 +111,7 @@ class MealsViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isSaving = false,
+                            composerOpen = false,
                             photoUris = emptyList(),
                             date = now.date.toString(),
                             hour = now.time.hour,

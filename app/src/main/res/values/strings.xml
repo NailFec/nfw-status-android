@@ -24,6 +24,7 @@
     <string name="action_remove_photo">Remove photo</string>
     <string name="action_add_photos">Add photos</string>
     <string name="action_import_recent">Import recent sleep</string>
+    <string name="action_import_all">Import all sleep</string>
     <string name="action_import_date">Import a date</string>
     <string name="action_delete_sleep">Delete sleep data</string>
     <string name="action_pick_start">Start</string>
@@ -73,6 +74,8 @@
     <string name="dialog_add_calendar">Add subscription</string>
 
     <string name="message_saved">Saved</string>
+    <string name="message_no_new_sleep">No new sleep to import.</string>
+    <string name="import_progress">%1$d / %2$d</string>
     <string name="settings_version">Version %1$s (%2$d)</string>
     <string name="action_check_updates">Check for updates</string>
     <string name="action_install_update">Update</string>
