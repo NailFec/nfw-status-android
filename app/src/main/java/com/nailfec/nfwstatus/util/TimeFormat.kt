@@ -36,7 +36,7 @@ object TimeFormat {
             ?: runCatching { ZonedDateTime.parse(iso).withZoneSameInstant(zone) }.getOrNull()
             ?: runCatching { Instant.parse(iso).atZone(zone) }.getOrNull()
             ?: return null
-        return Stamp(zoned.toLocalDate(), LocalTime.of(zoned.hour, zoned.minute))
+        return Stamp(zoned.toLocalDate(), zoned.toLocalTime().withNano(0))
     }
 
     fun formatDate(isoDate: String): String {
@@ -60,8 +60,8 @@ object TimeFormat {
         return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     }
 
-    fun toIso(isoDate: String, hour: Int, minute: Int): String? {
-        val dateTime = localDateTime(isoDate, hour, minute) ?: return null
+    fun toIso(isoDate: String, hour: Int, minute: Int, second: Int = 0): String? {
+        val dateTime = localDateTime(isoDate, hour, minute, second) ?: return null
         val offset = zone.rules.getOffset(dateTime)
         return OffsetDateTime.of(dateTime, offset).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
     }
@@ -79,9 +79,14 @@ object TimeFormat {
         return Duration.between(start, end).toMinutes().toInt()
     }
 
-    private fun localDateTime(isoDate: String, hour: Int, minute: Int): LocalDateTime? {
+    private fun localDateTime(
+        isoDate: String,
+        hour: Int,
+        minute: Int,
+        second: Int = 0,
+    ): LocalDateTime? {
         val date = runCatching { LocalDate.parse(isoDate) }.getOrNull() ?: return null
-        if (hour !in 0..23 || minute !in 0..59) return null
-        return LocalDateTime.of(date, LocalTime.of(hour, minute))
+        if (hour !in 0..23 || minute !in 0..59 || second !in 0..59) return null
+        return LocalDateTime.of(date, LocalTime.of(hour, minute, second))
     }
 }

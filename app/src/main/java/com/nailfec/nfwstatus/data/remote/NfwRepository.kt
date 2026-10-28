@@ -208,8 +208,16 @@ class NfwRepository @Inject constructor(
 
     private fun absoluteUrl(baseUrl: String, url: String): String {
         if (url.startsWith("http://") || url.startsWith("https://")) return url
+        val base = baseUrl.trimEnd('/')
         val path = if (url.startsWith("/")) url else "/$url"
-        return baseUrl.trimEnd('/') + path
+        val scheme = base.indexOf("://")
+        if (scheme < 0) return base + path
+        val pathStart = base.indexOf('/', scheme + 3)
+        if (pathStart < 0) return base + path
+        val origin = base.substring(0, pathStart)
+        val basePath = base.substring(pathStart)
+        if (path == basePath || path.startsWith("$basePath/")) return origin + path
+        return base + path
     }
 }
 

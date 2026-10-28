@@ -30,6 +30,7 @@ data class SegmentEditor(
     val startDate: String,
     val startHour: Int,
     val startMinute: Int,
+    val startSecond: Int,
 )
 
 @Immutable

@@ -131,6 +131,7 @@ class StatusViewModel @Inject constructor(
                     startDate = start.date.toString(),
                     startHour = start.time.hour,
                     startMinute = start.time.minute,
+                    startSecond = start.time.second,
                 ),
                 activePicker = null,
             )
@@ -151,7 +152,12 @@ class StatusViewModel @Inject constructor(
     private fun saveEdit() {
         val editor = _state.value.editor ?: return
         if (_state.value.isSaving) return
-        val startedAt = TimeFormat.toIso(editor.startDate, editor.startHour, editor.startMinute)
+        val startedAt = TimeFormat.toIso(
+            editor.startDate,
+            editor.startHour,
+            editor.startMinute,
+            editor.startSecond,
+        )
         if (startedAt == null) {
             viewModelScope.launch { _effects.send(StatusUiEffect.ShowMessage(R.string.error_invalid)) }
             return
