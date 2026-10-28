@@ -32,6 +32,7 @@ class CalendarsViewModel @Inject constructor(
     fun onEvent(event: CalendarsUiEvent) {
         when (event) {
             CalendarsUiEvent.Refresh -> refresh()
+            CalendarsUiEvent.RefreshSchedule -> refreshSchedule()
             CalendarsUiEvent.AddOpened ->
                 _state.update { it.copy(showAdd = true, draftName = "", draftUrl = "") }
             CalendarsUiEvent.AddDismissed -> _state.update { it.copy(showAdd = false) }
@@ -46,6 +47,24 @@ class CalendarsViewModel @Inject constructor(
 
     private fun refresh() {
         viewModelScope.launch { load() }
+    }
+
+    private fun refreshSchedule() {
+        if (_state.value.isRefreshingFeed) return
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshingFeed = true) }
+            when (val result = repository.refreshCalendars()) {
+                is NetworkResult.Success -> {
+                    _state.update { it.copy(isRefreshingFeed = false) }
+                    _effects.send(CalendarsUiEffect.ShowMessage(R.string.message_schedule_refreshed))
+                    load()
+                }
+                is NetworkResult.Failure -> {
+                    _state.update { it.copy(isRefreshingFeed = false) }
+                    _effects.send(CalendarsUiEffect.ShowMessage(result.kind.messageRes()))
+                }
+            }
+        }
     }
 
     private suspend fun load() {

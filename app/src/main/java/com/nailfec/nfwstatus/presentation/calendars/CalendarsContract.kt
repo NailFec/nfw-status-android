@@ -16,6 +16,7 @@ data class CalendarsUiState(
     val subscriptions: List<CalendarUi> = emptyList(),
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val isRefreshingFeed: Boolean = false,
     val showAdd: Boolean = false,
     val draftName: String = "",
     val draftUrl: String = "",
@@ -24,6 +25,7 @@ data class CalendarsUiState(
 
 sealed interface CalendarsUiEvent {
     data object Refresh : CalendarsUiEvent
+    data object RefreshSchedule : CalendarsUiEvent
     data object AddOpened : CalendarsUiEvent
     data object AddDismissed : CalendarsUiEvent
     data class NameChanged(val value: String) : CalendarsUiEvent

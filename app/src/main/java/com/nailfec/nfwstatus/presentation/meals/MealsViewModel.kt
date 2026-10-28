@@ -27,6 +27,7 @@ class MealsViewModel @Inject constructor(
 
     private val _effects = Channel<MealsUiEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
+    private var composerClockCustom = false
 
     init {
         refresh()
@@ -55,6 +56,9 @@ class MealsViewModel @Inject constructor(
             MealsUiEvent.Save -> save()
             MealsUiEvent.SaveEdit -> saveEdit()
             MealsUiEvent.Refresh -> refresh()
+            MealsUiEvent.ScreenShown -> {
+                if (!composerClockCustom) applyComposerNow()
+            }
             is MealsUiEvent.EditRequested -> openEditor(event.id)
             MealsUiEvent.EditDismissed -> _state.update { it.copy(editor = null, activePicker = null) }
             is MealsUiEvent.DeleteRequested -> _state.update { it.copy(pendingDeleteId = event.id) }
@@ -98,7 +102,17 @@ class MealsViewModel @Inject constructor(
             _state.update { it.copy(isSaving = true) }
             when (val result = repository.createMeal(snapshot.slot.wire, eatenAt, snapshot.photoUris)) {
                 is NetworkResult.Success -> {
-                    _state.update { it.copy(isSaving = false, photoUris = emptyList()) }
+                    composerClockCustom = false
+                    val now = TimeFormat.stampNow()
+                    _state.update {
+                        it.copy(
+                            isSaving = false,
+                            photoUris = emptyList(),
+                            date = now.date.toString(),
+                            hour = now.time.hour,
+                            minute = now.time.minute,
+                        )
+                    }
                     _effects.send(MealsUiEffect.ShowMessage(R.string.message_saved))
                     load()
                 }
@@ -185,10 +199,24 @@ class MealsViewModel @Inject constructor(
         }
     }
 
+    private fun applyComposerNow() {
+        val now = TimeFormat.stampNow()
+        _state.update {
+            it.copy(
+                date = now.date.toString(),
+                hour = now.time.hour,
+                minute = now.time.minute,
+            )
+        }
+    }
+
     private fun applyDate(utcMillis: Long) {
         val date = TimeFormat.dateFromUtcMillis(utcMillis).toString()
         when (_state.value.activePicker) {
-            MealPicker.ComposerDate -> _state.update { it.copy(date = date, activePicker = null) }
+            MealPicker.ComposerDate -> {
+                composerClockCustom = true
+                _state.update { it.copy(date = date, activePicker = null) }
+            }
             MealPicker.EditorDate -> {
                 updateEditor { it.copy(date = date) }
                 _state.update { it.copy(activePicker = null) }
@@ -199,8 +227,10 @@ class MealsViewModel @Inject constructor(
 
     private fun applyTime(hour: Int, minute: Int) {
         when (_state.value.activePicker) {
-            MealPicker.ComposerTime ->
+            MealPicker.ComposerTime -> {
+                composerClockCustom = true
                 _state.update { it.copy(hour = hour, minute = minute, activePicker = null) }
+            }
             MealPicker.EditorTime -> {
                 updateEditor { it.copy(hour = hour, minute = minute) }
                 _state.update { it.copy(activePicker = null) }

@@ -13,5 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+keystore.properties
+*.jks
+*.p12
+*.keystore
 
 .nailfec

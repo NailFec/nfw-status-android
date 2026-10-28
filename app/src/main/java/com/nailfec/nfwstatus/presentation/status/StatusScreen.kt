@@ -32,7 +32,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -56,7 +55,6 @@ import com.nailfec.nfwstatus.util.TimeFormat
 @Composable
 fun StatusScreen(
     onMessage: (String) -> Unit,
-    onBindRefresh: (() -> Unit) -> Unit,
     viewModel: StatusViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
@@ -68,10 +66,6 @@ fun StatusScreen(
                 is StatusUiEffect.ShowMessage -> onMessage(context.getString(effect.messageRes))
             }
         }
-    }
-    DisposableEffect(onBindRefresh, viewModel) {
-        onBindRefresh { viewModel.onEvent(StatusUiEvent.Refresh) }
-        onDispose { }
     }
     StatusContent(
         state = state,

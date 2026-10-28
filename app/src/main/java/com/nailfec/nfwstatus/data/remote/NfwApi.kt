@@ -121,18 +121,6 @@ class NfwApi @Inject constructor(
     suspend fun deleteSleep(creds: Credentials, date: String): NetworkResult<Unit> =
         sendEmpty(creds, "/api/sleep/$date", "DELETE", null, auth = true, upload = false)
 
-    suspend fun postScreenshot(creds: Credentials, date: String, photo: UploadPhoto): NetworkResult<Unit> {
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("date", date)
-            .addPhoto(photo)
-            .build()
-        return sendEmpty(creds, "/api/sleep/screenshots", "POST", body, auth = true, upload = true)
-    }
-
-    suspend fun deleteScreenshot(creds: Credentials, id: String): NetworkResult<Unit> =
-        sendEmpty(creds, "/api/sleep/screenshots/$id", "DELETE", null, auth = true, upload = false)
-
     suspend fun getCalendars(creds: Credentials): NetworkResult<CalendarListDto> =
         get(creds, "/api/calendars", auth = true)
 
@@ -141,6 +129,16 @@ class NfwApi @Inject constructor(
 
     suspend fun deleteCalendar(creds: Credentials, id: String): NetworkResult<Unit> =
         sendEmpty(creds, "/api/calendars/$id", "DELETE", null, auth = true, upload = false)
+
+    suspend fun refreshCalendars(creds: Credentials): NetworkResult<Unit> =
+        sendEmpty(
+            creds,
+            "/api/calendars/refresh",
+            "POST",
+            ByteArray(0).toRequestBody(null),
+            auth = true,
+            upload = true,
+        )
 
     private suspend inline fun <reified T> get(
         creds: Credentials,

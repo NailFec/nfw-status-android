@@ -47,7 +47,6 @@ class SleepViewModel @Inject constructor(
             is SleepUiEvent.DatePicked -> applyDate(event.utcMillis)
             is SleepUiEvent.TimePicked -> applyTime(event.hour, event.minute)
             is SleepUiEvent.DurationChanged -> updateEditor { it.copy(durationText = event.value) }
-            is SleepUiEvent.ScreenshotPicked -> uploadScreenshot(event.uri)
             is SleepUiEvent.SelectDate -> _state.update { it.copy(viewedDate = event.date) }
             is SleepUiEvent.EditRequested -> openEditor(event.date)
             SleepUiEvent.EditDismissed -> _state.update { it.copy(editor = null, activePicker = null) }
@@ -55,9 +54,6 @@ class SleepViewModel @Inject constructor(
             is SleepUiEvent.DeleteHealthRequested -> _state.update { it.copy(pendingDeleteDate = event.date) }
             SleepUiEvent.DeleteHealthDismissed -> _state.update { it.copy(pendingDeleteDate = null) }
             SleepUiEvent.DeleteHealthConfirmed -> confirmDeleteHealth()
-            is SleepUiEvent.DeleteShotRequested -> _state.update { it.copy(pendingDeleteShotId = event.id) }
-            SleepUiEvent.DeleteShotDismissed -> _state.update { it.copy(pendingDeleteShotId = null) }
-            SleepUiEvent.DeleteShotConfirmed -> confirmDeleteShot()
         }
     }
 
@@ -251,47 +247,11 @@ class SleepViewModel @Inject constructor(
         }
     }
 
-    private fun uploadScreenshot(uri: String) {
-        val date = _state.value.viewedDate
-        viewModelScope.launch {
-            _state.update { it.copy(isSaving = true) }
-            when (val result = repository.addScreenshot(date, uri)) {
-                is NetworkResult.Success -> {
-                    _state.update { it.copy(isSaving = false) }
-                    _effects.send(SleepUiEffect.ShowMessage(R.string.message_saved))
-                    load()
-                }
-                is NetworkResult.Failure -> {
-                    _state.update { it.copy(isSaving = false) }
-                    _effects.send(SleepUiEffect.ShowMessage(result.kind.messageRes()))
-                }
-            }
-        }
-    }
-
     private fun confirmDeleteHealth() {
         val date = _state.value.pendingDeleteDate ?: return
         viewModelScope.launch {
             _state.update { it.copy(pendingDeleteDate = null, isSaving = true) }
             when (val result = repository.deleteSleep(date)) {
-                is NetworkResult.Success -> {
-                    _state.update { it.copy(isSaving = false) }
-                    _effects.send(SleepUiEffect.ShowMessage(R.string.message_saved))
-                    load()
-                }
-                is NetworkResult.Failure -> {
-                    _state.update { it.copy(isSaving = false) }
-                    _effects.send(SleepUiEffect.ShowMessage(result.kind.messageRes()))
-                }
-            }
-        }
-    }
-
-    private fun confirmDeleteShot() {
-        val id = _state.value.pendingDeleteShotId ?: return
-        viewModelScope.launch {
-            _state.update { it.copy(pendingDeleteShotId = null, isSaving = true) }
-            when (val result = repository.deleteScreenshot(id)) {
                 is NetworkResult.Success -> {
                     _state.update { it.copy(isSaving = false) }
                     _effects.send(SleepUiEffect.ShowMessage(R.string.message_saved))
@@ -314,6 +274,5 @@ class SleepViewModel @Inject constructor(
         wakeLabel = wakeTime?.let(TimeFormat::formatIso),
         durationMinutes = durationMinutes,
         stages = stages.map { it.stage },
-        screenshots = screenshots.map { SleepShotUi(it.id, it.url) },
     )
 }

@@ -69,7 +69,6 @@ data class SleepDayDto(
     val wakeTime: String? = null,
     val durationMinutes: Int? = null,
     val stages: List<StageDto> = emptyList(),
-    val screenshots: List<ScreenshotDto> = emptyList(),
 )
 
 @Serializable
@@ -77,14 +76,6 @@ data class StageDto(
     val stage: String,
     val start: String,
     val end: String,
-)
-
-@Serializable
-data class ScreenshotDto(
-    @Serializable(with = FlexibleIdSerializer::class) val id: String,
-    val date: String? = null,
-    val url: String,
-    val createdAt: String? = null,
 )
 
 @Serializable

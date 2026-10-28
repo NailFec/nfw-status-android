@@ -5,12 +5,6 @@ import androidx.compose.runtime.Immutable
 import com.nailfec.nfwstatus.util.TimeFormat
 
 @Immutable
-data class SleepShotUi(
-    val id: String,
-    val url: String,
-)
-
-@Immutable
 data class SleepDayUi(
     val date: String,
     val dateLabel: String,
@@ -20,7 +14,6 @@ data class SleepDayUi(
     val wakeLabel: String?,
     val durationMinutes: Int?,
     val stages: List<String>,
-    val screenshots: List<SleepShotUi>,
 )
 
 enum class SleepPicker { ViewedDate, ImportDate, BedDate, BedTime, WakeDate, WakeTime }
@@ -62,7 +55,6 @@ data class SleepUiState(
     val activePicker: SleepPicker? = null,
     val pendingImport: PendingImport? = null,
     val pendingDeleteDate: String? = null,
-    val pendingDeleteShotId: String? = null,
 )
 
 sealed interface SleepUiEvent {
@@ -75,7 +67,6 @@ sealed interface SleepUiEvent {
     data class DatePicked(val utcMillis: Long) : SleepUiEvent
     data class TimePicked(val hour: Int, val minute: Int) : SleepUiEvent
     data class DurationChanged(val value: String) : SleepUiEvent
-    data class ScreenshotPicked(val uri: String) : SleepUiEvent
     data class SelectDate(val date: String) : SleepUiEvent
     data class EditRequested(val date: String) : SleepUiEvent
     data object EditDismissed : SleepUiEvent
@@ -83,9 +74,6 @@ sealed interface SleepUiEvent {
     data class DeleteHealthRequested(val date: String) : SleepUiEvent
     data object DeleteHealthDismissed : SleepUiEvent
     data object DeleteHealthConfirmed : SleepUiEvent
-    data class DeleteShotRequested(val id: String) : SleepUiEvent
-    data object DeleteShotDismissed : SleepUiEvent
-    data object DeleteShotConfirmed : SleepUiEvent
 }
 
 sealed interface SleepUiEffect {

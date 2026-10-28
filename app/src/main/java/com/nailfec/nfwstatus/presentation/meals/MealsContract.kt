@@ -39,7 +39,7 @@ data class MealEditor(
 data class MealsUiState(
     val slot: MealSlot = MealSlot.BREAKFAST,
     val date: String = "",
-    val hour: Int = 8,
+    val hour: Int = 0,
     val minute: Int = 0,
     val photoUris: List<String> = emptyList(),
     val meals: List<MealUi> = emptyList(),
@@ -66,6 +66,7 @@ sealed interface MealsUiEvent {
     data object Save : MealsUiEvent
     data object SaveEdit : MealsUiEvent
     data object Refresh : MealsUiEvent
+    data object ScreenShown : MealsUiEvent
     data class EditRequested(val id: String) : MealsUiEvent
     data object EditDismissed : MealsUiEvent
     data class DeleteRequested(val id: String) : MealsUiEvent

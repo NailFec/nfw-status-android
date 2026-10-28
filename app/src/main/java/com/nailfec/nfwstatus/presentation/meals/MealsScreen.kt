@@ -34,8 +34,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -58,7 +58,6 @@ import com.nailfec.nfwstatus.util.TimeFormat
 @Composable
 fun MealsScreen(
     onMessage: (String) -> Unit,
-    onBindRefresh: (() -> Unit) -> Unit,
     viewModel: MealsViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
@@ -86,9 +85,9 @@ fun MealsScreen(
             }
         }
     }
-    DisposableEffect(onBindRefresh, viewModel) {
-        onBindRefresh { viewModel.onEvent(MealsUiEvent.Refresh) }
-        onDispose { }
+    LifecycleStartEffect(viewModel) {
+        viewModel.onEvent(MealsUiEvent.ScreenShown)
+        onStopOrDispose { }
     }
     MealsContent(
         state = state,

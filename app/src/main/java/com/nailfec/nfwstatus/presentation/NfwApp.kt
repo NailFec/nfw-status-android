@@ -1,12 +1,13 @@
 package com.nailfec.nfwstatus.presentation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
@@ -61,11 +62,7 @@ fun NfwApp(modifier: Modifier = Modifier) {
             Unit
         }
     }
-    val refreshAction = remember { mutableStateOf<() -> Unit>({}) }
     val addAction = remember { mutableStateOf<() -> Unit>({}) }
-    val onBindRefresh = remember {
-        { action: () -> Unit -> refreshAction.value = action }
-    }
     val onBindAdd = remember {
         { action: () -> Unit -> addAction.value = action }
     }
@@ -102,12 +99,6 @@ fun NfwApp(modifier: Modifier = Modifier) {
                             IconButton(onClick = { addAction.value.invoke() }) {
                                 CalendarAddIcon()
                             }
-                        }
-                        IconButton(onClick = { refreshAction.value.invoke() }) {
-                            Icon(
-                                imageVector = Icons.Filled.Refresh,
-                                contentDescription = stringResource(R.string.action_refresh),
-                            )
                         }
                         IconButton(onClick = {
                             navController.navigate(SettingsRoute) { launchSingleTop = true }
@@ -167,24 +158,46 @@ fun NfwApp(modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            composable<StatusRoute> {
-                StatusScreen(onMessage = onMessage, onBindRefresh = onBindRefresh)
+            composable<StatusRoute>(
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
+            ) {
+                StatusScreen(onMessage = onMessage)
             }
-            composable<MealsRoute> {
-                MealsScreen(onMessage = onMessage, onBindRefresh = onBindRefresh)
+            composable<MealsRoute>(
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
+            ) {
+                MealsScreen(onMessage = onMessage)
             }
-            composable<SleepRoute> {
-                SleepScreen(onMessage = onMessage, onBindRefresh = onBindRefresh)
+            composable<SleepRoute>(
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
+            ) {
+                SleepScreen(onMessage = onMessage)
             }
-            composable<CalendarsRoute> {
+            composable<CalendarsRoute>(
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
+            ) {
                 CalendarsScreen(
                     onMessage = onMessage,
-                    onBindRefresh = onBindRefresh,
                     onBindAdd = onBindAdd,
                 )
             }
             composable<SettingsRoute> {
-                SettingsScreen(onMessage = onMessage)
+                SettingsScreen(
+                    onMessage = onMessage,
+                    onSaved = { navController.popBackStack() },
+                )
             }
         }
     }

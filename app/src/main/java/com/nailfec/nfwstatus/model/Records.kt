@@ -32,18 +32,12 @@ data class SleepStage(
     val end: String,
 )
 
-data class SleepShot(
-    val id: String,
-    val url: String,
-)
-
 data class SleepDay(
     val date: String,
     val bedtime: String?,
     val wakeTime: String?,
     val durationMinutes: Int?,
     val stages: List<SleepStage>,
-    val screenshots: List<SleepShot>,
 )
 
 data class CalendarSubscription(

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -37,7 +38,6 @@ import com.nailfec.nfwstatus.presentation.common.ConfirmDialog
 @Composable
 fun CalendarsScreen(
     onMessage: (String) -> Unit,
-    onBindRefresh: (() -> Unit) -> Unit,
     onBindAdd: (() -> Unit) -> Unit,
     viewModel: CalendarsViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
@@ -51,8 +51,7 @@ fun CalendarsScreen(
             }
         }
     }
-    DisposableEffect(onBindRefresh, onBindAdd, viewModel) {
-        onBindRefresh { viewModel.onEvent(CalendarsUiEvent.Refresh) }
+    DisposableEffect(onBindAdd, viewModel) {
         onBindAdd { viewModel.onEvent(CalendarsUiEvent.AddOpened) }
         onDispose { }
     }
@@ -71,10 +70,19 @@ private fun CalendarsContent(
         modifier = modifier.fillMaxSize(),
     ) {
         Column(Modifier.fillMaxSize()) {
-            if (state.isSaving) {
+            if (state.isSaving || state.isRefreshingFeed) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            Button(
+                onClick = { onEvent(CalendarsUiEvent.RefreshSchedule) },
+                enabled = !state.isRefreshingFeed && !state.isSaving,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            ) {
+                Text(stringResource(R.string.action_refresh_schedule))
+            }
+            LazyColumn(modifier = Modifier.weight(1f)) {
                 if (state.subscriptions.isEmpty()) {
                     item(key = "empty", contentType = "empty") {
                         Text(

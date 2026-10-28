@@ -8,7 +8,6 @@ import com.nailfec.nfwstatus.model.Meal
 import com.nailfec.nfwstatus.model.MealPhoto
 import com.nailfec.nfwstatus.model.Phrase
 import com.nailfec.nfwstatus.model.SleepDay
-import com.nailfec.nfwstatus.model.SleepShot
 import com.nailfec.nfwstatus.model.SleepStage
 import com.nailfec.nfwstatus.model.SleepUpload
 import com.nailfec.nfwstatus.model.StatusSegment
@@ -108,9 +107,6 @@ class NfwRepository @Inject constructor(
                     wakeTime = day.wakeTime,
                     durationMinutes = day.durationMinutes,
                     stages = day.stages.map { SleepStage(it.stage, it.start, it.end) },
-                    screenshots = day.screenshots.map {
-                        SleepShot(it.id, absoluteUrl(creds.baseUrl, it.url))
-                    },
                 )
             }
         }
@@ -141,15 +137,6 @@ class NfwRepository @Inject constructor(
     suspend fun deleteSleep(date: String): NetworkResult<Unit> =
         authed(requireToken = true) { api.deleteSleep(it, date) }
 
-    suspend fun addScreenshot(date: String, photoUri: String): NetworkResult<Unit> =
-        withPhotos(listOf(photoUri)) { photos ->
-            val photo = photos.firstOrNull() ?: return@withPhotos NetworkResult.Failure(FailureKind.Photo)
-            authed(requireToken = true) { api.postScreenshot(it, date, photo) }
-        }
-
-    suspend fun deleteScreenshot(id: String): NetworkResult<Unit> =
-        authed(requireToken = true) { api.deleteScreenshot(it, id) }
-
     suspend fun getCalendars(): NetworkResult<List<CalendarSubscription>> =
         authed(requireToken = true) { creds ->
             api.getCalendars(creds).map { list ->
@@ -169,6 +156,9 @@ class NfwRepository @Inject constructor(
 
     suspend fun deleteCalendar(id: String): NetworkResult<Unit> =
         authed(requireToken = true) { api.deleteCalendar(it, id) }
+
+    suspend fun refreshCalendars(): NetworkResult<Unit> =
+        authed(requireToken = true) { api.refreshCalendars(it) }
 
     private suspend fun <T> authed(
         requireToken: Boolean,
