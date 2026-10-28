@@ -30,14 +30,11 @@ class NfwApi @Inject constructor(
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    suspend fun getHistory(creds: Credentials, end: String?): NetworkResult<HistoryPageDto> {
-        val path = if (end == null) {
-            "/api/history?limit=100"
-        } else {
-            "/api/history?end=$end&limit=100"
-        }
-        return get(creds, path, auth = false)
-    }
+    suspend fun getToday(creds: Credentials): NetworkResult<TodayDto> =
+        get(creds, "/api/today", auth = false)
+
+    suspend fun getHistory(creds: Credentials, end: String): NetworkResult<HistoryPageDto> =
+        get(creds, "/api/history?end=$end&limit=100", auth = false)
 
     suspend fun getStatus(creds: Credentials): NetworkResult<StatusListDto> =
         get(creds, "/api/status?limit=100", auth = false)

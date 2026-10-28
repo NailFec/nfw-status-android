@@ -27,37 +27,51 @@ class NfwRepository @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     suspend fun getHistory(end: String?): NetworkResult<HistoryPage> = authed(requireToken = false) { creds ->
-        api.getHistory(creds, end).map { page ->
-            HistoryPage(
-                timezone = page.timezone,
-                now = page.now,
-                days = page.days.map { day ->
-                    HistoryDay(
-                        day = day.day,
-                        segments = day.segments.map { segment ->
-                            StatusSegment(
-                                id = segment.id,
-                                level = segment.level,
-                                content = segment.content,
-                                startedAt = segment.startedAt,
-                                endedAt = segment.endedAt,
-                            )
-                        },
-                    )
-                },
-                hasMore = page.hasMore,
-                current = page.current?.let {
+        if (end == null) {
+            api.getToday(creds).map { page ->
+                historyPage(page.timezone, page.now, page.history, page.historyHasMore, page.current)
+            }
+        } else {
+            api.getHistory(creds, end).map { page ->
+                historyPage(page.timezone, page.now, page.days, page.hasMore, page.current)
+            }
+        }
+    }
+
+    private fun historyPage(
+        timezone: String,
+        now: String,
+        days: List<HistoryDayDto>,
+        hasMore: Boolean,
+        current: CurrentStatusDto?,
+    ): HistoryPage = HistoryPage(
+        timezone = timezone,
+        now = now,
+        days = days.map { day ->
+            HistoryDay(
+                day = day.day,
+                segments = day.segments.map { segment ->
                     StatusSegment(
-                        id = it.id,
-                        level = it.level,
-                        content = it.content,
-                        startedAt = it.startedAt,
-                        endedAt = null,
+                        id = segment.id,
+                        level = segment.level,
+                        content = segment.content,
+                        startedAt = segment.startedAt,
+                        endedAt = segment.endedAt,
                     )
                 },
             )
-        }
-    }
+        },
+        hasMore = hasMore,
+        current = current?.let {
+            StatusSegment(
+                id = it.id,
+                level = it.level,
+                content = it.content,
+                startedAt = it.startedAt,
+                endedAt = null,
+            )
+        },
+    )
 
     suspend fun getSegments(): NetworkResult<List<StatusSegment>> = authed(requireToken = false) { creds ->
         api.getStatus(creds).map { list ->

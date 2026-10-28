@@ -24,6 +24,15 @@ data class CreateStatusDto(
 )
 
 @Serializable
+data class TodayDto(
+    val timezone: String = "Asia/Shanghai",
+    val now: String,
+    val history: List<HistoryDayDto> = emptyList(),
+    val historyHasMore: Boolean = false,
+    val current: CurrentStatusDto? = null,
+)
+
+@Serializable
 data class HistoryPageDto(
     val timezone: String = "Asia/Shanghai",
     val now: String,
