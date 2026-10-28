@@ -193,7 +193,12 @@ fun NfwApp(modifier: Modifier = Modifier) {
                     onBindAdd = onBindAdd,
                 )
             }
-            composable<SettingsRoute> {
+            composable<SettingsRoute>(
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
+            ) {
                 SettingsScreen(
                     onMessage = onMessage,
                     onSaved = { navController.popBackStack() },
