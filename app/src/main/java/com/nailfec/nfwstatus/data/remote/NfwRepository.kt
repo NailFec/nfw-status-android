@@ -187,6 +187,9 @@ class NfwRepository @Inject constructor(
         uris: List<String>,
         block: suspend (List<UploadPhoto>) -> NetworkResult<Unit>,
     ): NetworkResult<Unit> {
+        if (uris.isEmpty()) {
+            return block(emptyList())
+        }
         val photos = loadPhotos(uris) ?: return NetworkResult.Failure(FailureKind.Photo)
         return block(photos)
     }
