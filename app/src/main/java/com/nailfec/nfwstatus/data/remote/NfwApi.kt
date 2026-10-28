@@ -42,12 +42,11 @@ class NfwApi @Inject constructor(
         level: String,
         content: String,
         startedAt: String,
-        endedAt: String?,
     ): NetworkResult<Unit> = sendEmpty(
         creds = creds,
         path = "/api/status/$id",
         method = "PATCH",
-        body = json.encodeToString(PatchStatusDto(level, content, startedAt, endedAt)).toJsonBody(),
+        body = json.encodeToString(PatchStatusDto(level, content, startedAt)).toJsonBody(),
         auth = true,
         upload = false,
     )

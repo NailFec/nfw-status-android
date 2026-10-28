@@ -18,10 +18,9 @@ data class SegmentUi(
     val startLabel: String,
     val endLabel: String?,
     val startedAt: String,
-    val endedAt: String?,
 )
 
-enum class StatusPicker { StartDate, StartTime, EndDate, EndTime }
+enum class StatusPicker { StartDate, StartTime }
 
 @Immutable
 data class SegmentEditor(
@@ -31,10 +30,6 @@ data class SegmentEditor(
     val startDate: String,
     val startHour: Int,
     val startMinute: Int,
-    val stillCurrent: Boolean,
-    val endDate: String,
-    val endHour: Int,
-    val endMinute: Int,
 )
 
 @Immutable
@@ -64,7 +59,6 @@ sealed interface StatusUiEvent {
     data object EditDismissed : StatusUiEvent
     data class EditorLevelSelected(val level: Level) : StatusUiEvent
     data class EditorContentChanged(val value: String) : StatusUiEvent
-    data class StillCurrentChanged(val current: Boolean) : StatusUiEvent
     data class OpenPicker(val picker: StatusPicker) : StatusUiEvent
     data object DismissPicker : StatusUiEvent
     data class DatePicked(val utcMillis: Long) : StatusUiEvent

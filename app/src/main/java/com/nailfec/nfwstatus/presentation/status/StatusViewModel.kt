@@ -48,7 +48,6 @@ class StatusViewModel @Inject constructor(
             StatusUiEvent.EditDismissed -> _state.update { it.copy(editor = null, activePicker = null) }
             is StatusUiEvent.EditorLevelSelected -> updateEditor { it.copy(level = event.level) }
             is StatusUiEvent.EditorContentChanged -> updateEditor { it.copy(content = event.value) }
-            is StatusUiEvent.StillCurrentChanged -> updateEditor { it.copy(stillCurrent = event.current) }
             is StatusUiEvent.OpenPicker -> _state.update { it.copy(activePicker = event.picker) }
             StatusUiEvent.DismissPicker -> _state.update { it.copy(activePicker = null) }
             is StatusUiEvent.DatePicked -> applyDate(event.utcMillis)
@@ -123,7 +122,6 @@ class StatusViewModel @Inject constructor(
             viewModelScope.launch { _effects.send(StatusUiEffect.ShowMessage(R.string.error_invalid)) }
             return
         }
-        val end = segment.endedAt?.let(TimeFormat::parse) ?: TimeFormat.stampNow()
         _state.update {
             it.copy(
                 editor = SegmentEditor(
@@ -133,10 +131,6 @@ class StatusViewModel @Inject constructor(
                     startDate = start.date.toString(),
                     startHour = start.time.hour,
                     startMinute = start.time.minute,
-                    stillCurrent = segment.endedAt == null,
-                    endDate = end.date.toString(),
-                    endHour = end.time.hour,
-                    endMinute = end.time.minute,
                 ),
                 activePicker = null,
             )
@@ -144,27 +138,13 @@ class StatusViewModel @Inject constructor(
     }
 
     private fun applyDate(utcMillis: Long) {
-        val picker = _state.value.activePicker
         val date = TimeFormat.dateFromUtcMillis(utcMillis).toString()
-        updateEditor { editor ->
-            when (picker) {
-                StatusPicker.StartDate -> editor.copy(startDate = date)
-                StatusPicker.EndDate -> editor.copy(endDate = date)
-                else -> editor
-            }
-        }
+        updateEditor { editor -> editor.copy(startDate = date) }
         _state.update { it.copy(activePicker = null) }
     }
 
     private fun applyTime(hour: Int, minute: Int) {
-        val picker = _state.value.activePicker
-        updateEditor { editor ->
-            when (picker) {
-                StatusPicker.StartTime -> editor.copy(startHour = hour, startMinute = minute)
-                StatusPicker.EndTime -> editor.copy(endHour = hour, endMinute = minute)
-                else -> editor
-            }
-        }
+        updateEditor { editor -> editor.copy(startHour = hour, startMinute = minute) }
         _state.update { it.copy(activePicker = null) }
     }
 
@@ -172,12 +152,7 @@ class StatusViewModel @Inject constructor(
         val editor = _state.value.editor ?: return
         if (_state.value.isSaving) return
         val startedAt = TimeFormat.toIso(editor.startDate, editor.startHour, editor.startMinute)
-        val endedAt = if (editor.stillCurrent) {
-            null
-        } else {
-            TimeFormat.toIso(editor.endDate, editor.endHour, editor.endMinute)
-        }
-        if (startedAt == null || (!editor.stillCurrent && endedAt == null)) {
+        if (startedAt == null) {
             viewModelScope.launch { _effects.send(StatusUiEffect.ShowMessage(R.string.error_invalid)) }
             return
         }
@@ -189,7 +164,6 @@ class StatusViewModel @Inject constructor(
                     level = editor.level.wire,
                     content = editor.content.trim(),
                     startedAt = startedAt,
-                    endedAt = endedAt,
                 )
             ) {
                 is NetworkResult.Success -> {
@@ -238,16 +212,12 @@ class StatusViewModel @Inject constructor(
         }
     }
 
-    private fun StatusSegment.toUi(): SegmentUi {
-        val parsedEnd = endedAt
-        return SegmentUi(
-            id = id,
-            level = Level.fromWire(level),
-            content = content,
-            startLabel = TimeFormat.formatIso(startedAt),
-            endLabel = parsedEnd?.let(TimeFormat::formatIso),
-            startedAt = startedAt,
-            endedAt = endedAt,
-        )
-    }
+    private fun StatusSegment.toUi(): SegmentUi = SegmentUi(
+        id = id,
+        level = Level.fromWire(level),
+        content = content,
+        startLabel = TimeFormat.formatIso(startedAt),
+        endLabel = endedAt?.let(TimeFormat::formatIso),
+        startedAt = startedAt,
+    )
 }

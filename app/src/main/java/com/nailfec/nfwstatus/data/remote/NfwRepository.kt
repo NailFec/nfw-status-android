@@ -46,9 +46,8 @@ class NfwRepository @Inject constructor(
         level: String,
         content: String,
         startedAt: String,
-        endedAt: String?,
     ): NetworkResult<Unit> = authed(requireToken = true) {
-        api.patchStatus(it, id, level, content, startedAt, endedAt)
+        api.patchStatus(it, id, level, content, startedAt)
     }
 
     suspend fun deleteSegment(id: String): NetworkResult<Unit> =

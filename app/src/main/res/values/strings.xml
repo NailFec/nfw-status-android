@@ -27,7 +27,6 @@
     <string name="action_import_date">Import a date</string>
     <string name="action_delete_sleep">Delete sleep data</string>
     <string name="action_pick_start">Start</string>
-    <string name="action_pick_end">End</string>
     <string name="field_bedtime">Bedtime</string>
     <string name="field_wake">Wake</string>
 
@@ -55,7 +54,6 @@
     <string name="field_name">Name</string>
     <string name="field_url">URL</string>
     <string name="field_duration">Duration (minutes)</string>
-    <string name="switch_still_current">Still current</string>
 
     <string name="time_range">%1$s – %2$s</string>
     <string name="time_range_open">%1$s – now</string>

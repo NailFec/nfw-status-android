@@ -28,7 +28,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -285,26 +284,6 @@ private fun EditorSheet(
                 onDate = { onEvent(StatusUiEvent.OpenPicker(StatusPicker.StartDate)) },
                 onTime = { onEvent(StatusUiEvent.OpenPicker(StatusPicker.StartTime)) },
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.switch_still_current))
-                Switch(
-                    checked = editor.stillCurrent,
-                    onCheckedChange = { onEvent(StatusUiEvent.StillCurrentChanged(it)) },
-                )
-            }
-            if (!editor.stillCurrent) {
-                Text(stringResource(R.string.action_pick_end))
-                DateTimeButtons(
-                    dateLabel = TimeFormat.formatDate(editor.endDate),
-                    timeLabel = TimeFormat.formatTime(editor.endHour, editor.endMinute),
-                    onDate = { onEvent(StatusUiEvent.OpenPicker(StatusPicker.EndDate)) },
-                    onTime = { onEvent(StatusUiEvent.OpenPicker(StatusPicker.EndTime)) },
-                )
-            }
             Button(
                 onClick = { onEvent(StatusUiEvent.SaveEdit) },
                 enabled = !saving,
@@ -351,20 +330,9 @@ private fun PickerHost(
             onConfirm = { onEvent(StatusUiEvent.DatePicked(it)) },
             onDismiss = { onEvent(StatusUiEvent.DismissPicker) },
         )
-        StatusPicker.EndDate -> AppDatePickerDialog(
-            initialUtcMillis = TimeFormat.dateToUtcMillis(editor.endDate),
-            onConfirm = { onEvent(StatusUiEvent.DatePicked(it)) },
-            onDismiss = { onEvent(StatusUiEvent.DismissPicker) },
-        )
         StatusPicker.StartTime -> AppTimePickerDialog(
             hour = editor.startHour,
             minute = editor.startMinute,
-            onConfirm = { hour, minute -> onEvent(StatusUiEvent.TimePicked(hour, minute)) },
-            onDismiss = { onEvent(StatusUiEvent.DismissPicker) },
-        )
-        StatusPicker.EndTime -> AppTimePickerDialog(
-            hour = editor.endHour,
-            minute = editor.endMinute,
             onConfirm = { hour, minute -> onEvent(StatusUiEvent.TimePicked(hour, minute)) },
             onDismiss = { onEvent(StatusUiEvent.DismissPicker) },
         )

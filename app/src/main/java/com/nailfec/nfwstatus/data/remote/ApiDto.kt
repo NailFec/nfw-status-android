@@ -28,7 +28,6 @@ data class PatchStatusDto(
     val level: String,
     val content: String,
     val startedAt: String,
-    val endedAt: String? = null,
 )
 
 @Serializable
